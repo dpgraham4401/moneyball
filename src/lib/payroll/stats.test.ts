@@ -2,31 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parsePayrollCsv } from "@/lib/payroll/csv";
 import { employeeStats, summarize } from "@/lib/payroll/stats";
-import { WEEKDAYS, type PayrollRecord } from "@/lib/payroll/types";
-
-/** Build a record from per-day [standard, overtime] pairs (Mon first, missing days = 0). */
-function makeRecord(
-  overrides: Partial<PayrollRecord> & { hours: [number, number][] }
-): PayrollRecord {
-  const { hours, ...fields } = overrides;
-  return {
-    ref: "test",
-    employeeId: "1",
-    employeeName: "Ana Smith",
-    level: "APPRENTICE",
-    occupation: "Mason",
-    weekEnding: "2025-03-01",
-    standardRateCents: 2705,
-    overtimeRateCents: 4058,
-    benefitsRateCents: 1217,
-    days: WEEKDAYS.map((day, dayIndex) => ({
-      day,
-      standard: hours[dayIndex]?.[0] ?? 0,
-      overtime: hours[dayIndex]?.[1] ?? 0,
-    })),
-    ...fields,
-  };
-}
+import { makeRecord } from "@/lib/payroll/make-record";
 
 // Hand-checked fixture: Ana works 2 weeks (one spelled differently), Bob 1 week.
 const records = [
