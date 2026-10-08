@@ -1,0 +1,11 @@
+# https://lefthook.dev/configuration/
+pre-commit:
+  piped: true # format first, then lint the formatted result
+  jobs:
+    - name: prettier
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+    - name: eslint
+      glob: "*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}"
+      run: pnpm exec eslint --max-warnings=0 {staged_files}
