@@ -12,11 +12,11 @@ export function parseCsv(text: string): CsvResult {
   const { data, errors } = Papa.parse<CsvRow>(text, {
     header: true,
     skipEmptyLines: "greedy",
-    transformHeader: (h) => h.trim().toLowerCase(),
-    transform: (v) => v.trim(),
+    transformHeader: (header) => header.trim().toLowerCase(),
+    transform: (value) => value.trim(),
   });
   return {
     rows: data,
-    errors: errors.map((e) => ({ row: (e.row ?? -1) + 1, message: e.message })),
+    errors: errors.map((error) => ({ row: (error.row ?? -1) + 1, message: error.message })),
   };
 }

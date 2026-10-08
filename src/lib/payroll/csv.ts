@@ -1,4 +1,4 @@
-import { parseCsv } from "@/lib/csv";
+import { parseCsv, type CsvRow } from "@/lib/csv";
 import { WEEKDAYS, type Level, type ParseResult, type PayrollRecord } from "@/lib/payroll/types";
 
 const COLUMNS = [
@@ -7,7 +7,7 @@ const COLUMNS = [
   "level",
   "occupation",
   "week_ending",
-  ...WEEKDAYS.flatMap((d) => [`${d}_st_hours`, `${d}_ot_hours`]),
+  ...WEEKDAYS.flatMap((weekday) => [`${weekday}_st_hours`, `${weekday}_ot_hours`]),
   "standard_rate",
   "overtime_rate",
   "benefits_rate",
@@ -20,82 +20,94 @@ const COLUMNS = [
  */
 export function parsePayrollCsv(text: string, sourceName = "upload.csv"): ParseResult {
   const csv = parseCsv(text);
-  const present = new Set(Object.keys(csv.rows[0] ?? {}));
-  const missing = COLUMNS.filter((c) => !present.has(c));
-  if (missing.length) {
-    return { records: [], rejected: [], fileError: `Missing columns: ${missing.join(", ")}` };
+  const presentColumns = new Set(Object.keys(csv.rows[0] ?? {}));
+  const missingColumns = COLUMNS.filter((column) => !presentColumns.has(column));
+  if (missingColumns.length) {
+    return {
+      records: [],
+      rejected: [],
+      fileError: `Missing columns: ${missingColumns.join(", ")}`,
+    };
   }
 
-  const csvErrors = new Map(csv.errors.map((e) => [e.row, e.message]));
+  const csvErrorsByRow = new Map(csv.errors.map((error) => [error.row, error.message]));
   const result: ParseResult = { records: [], rejected: [] };
-  csv.rows.forEach((r, i) => {
-    const ref = `${sourceName}:${i + 2}`; // +1 for 0-index, +1 for the header line
-    const csvError = csvErrors.get(i + 1);
+  csv.rows.forEach((row, rowIndex) => {
+    const ref = `${sourceName}:${rowIndex + 2}`; // +1 for 0-index, +1 for the header line
+    const csvError = csvErrorsByRow.get(rowIndex + 1);
     if (csvError) return result.rejected.push({ ref, reason: csvError });
     try {
-      result.records.push(toRecord(r, ref));
-    } catch (e) {
-      result.rejected.push({ ref, reason: (e as Error).message });
+      result.records.push(toRecord(row, ref));
+    } catch (error) {
+      result.rejected.push({ ref, reason: (error as Error).message });
     }
   });
   return result;
 }
 
-function toRecord(r: Record<string, string>, ref: string): PayrollRecord {
+function toRecord(row: CsvRow, ref: string): PayrollRecord {
   return {
     ref,
-    employeeId: required(r.employee_id, "employee_id"),
-    employeeName: required(r.employee_name, "employee_name"),
-    level: toLevel(r.level),
-    occupation: required(r.occupation, "occupation"),
-    weekEnding: toIsoDate(r.week_ending),
-    days: WEEKDAYS.map((day) => ({
-      day,
-      standard: toHours(r[`${day}_st_hours`], `${day}_st_hours`),
-      overtime: toHours(r[`${day}_ot_hours`], `${day}_ot_hours`),
+    employeeId: required(row.employee_id, "employee_id"),
+    employeeName: required(row.employee_name, "employee_name"),
+    level: toLevel(row.level),
+    occupation: required(row.occupation, "occupation"),
+    weekEnding: toIsoDate(row.week_ending),
+    days: WEEKDAYS.map((weekday) => ({
+      day: weekday,
+      standard: toHours(row[`${weekday}_st_hours`], `${weekday}_st_hours`),
+      overtime: toHours(row[`${weekday}_ot_hours`], `${weekday}_ot_hours`),
     })),
-    standardRateCents: toCents(r.standard_rate, "standard_rate"),
-    overtimeRateCents: toCents(r.overtime_rate, "overtime_rate"),
-    benefitsRateCents: toCents(r.benefits_rate, "benefits_rate"),
+    standardRateCents: toCents(row.standard_rate, "standard_rate"),
+    overtimeRateCents: toCents(row.overtime_rate, "overtime_rate"),
+    benefitsRateCents: toCents(row.benefits_rate, "benefits_rate"),
   };
 }
 
-function required(v: string | undefined, name: string): string {
-  if (!v) throw new Error(`${name} is required`);
-  return v;
+function required(value: string | undefined, columnName: string): string {
+  if (!value) throw new Error(`${columnName} is required`);
+  return value;
 }
 
-function toLevel(v: string | undefined): Level {
-  const s = (v ?? "").toUpperCase();
-  if (s === "APPRENTICE" || s === "JOURNEYWORKER") return s;
-  throw new Error(`level must be APPRENTICE or JOURNEYWORKER: "${v ?? ""}"`);
+function toLevel(value: string | undefined): Level {
+  const level = (value ?? "").toUpperCase();
+  if (level === "APPRENTICE" || level === "JOURNEYWORKER") return level;
+  throw new Error(`level must be APPRENTICE or JOURNEYWORKER: "${value ?? ""}"`);
 }
 
 /** Blank counts as 0 hours; anything else must be a number in 0–24. */
-function toHours(v: string | undefined, name: string): number {
-  if (!v) return 0;
-  const h = Number(v);
-  if (!Number.isFinite(h) || h < 0 || h > 24) throw new Error(`${name} must be 0–24: "${v}"`);
-  return h;
+function toHours(value: string | undefined, columnName: string): number {
+  if (!value) return 0;
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours < 0 || hours > 24) {
+    throw new Error(`${columnName} must be 0–24: "${value}"`);
+  }
+  return hours;
 }
 
 /** "$1,234.5" → 123450. Exact for up to 2 decimals; rejects negatives and junk. */
-export function toCents(v: string | undefined, name: string): number {
-  const s = (v ?? "").replace(/[$,]/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) throw new Error(`${name} is not a valid amount: "${v ?? ""}"`);
-  return Math.round(Number(s) * 100);
+export function toCents(value: string | undefined, columnName: string): number {
+  const amount = (value ?? "").replace(/[$,]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+    throw new Error(`${columnName} is not a valid amount: "${value ?? ""}"`);
+  }
+  return Math.round(Number(amount) * 100);
 }
 
 /** MM/DD/YYYY (or YYYY-MM-DD) → YYYY-MM-DD; rejects impossible dates like 02/30/2025. */
-export function toIsoDate(v: string | undefined): string {
-  const s = v ?? "";
-  const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  const [y, m, d] = us ? [us[3], us[1], us[2]] : iso ? [iso[1], iso[2], iso[3]] : [];
-  if (!y || !m || !d) throw new Error(`week_ending is not MM/DD/YYYY: "${s}"`);
-  const date = new Date(Date.UTC(+y, +m - 1, +d));
-  if (date.getUTCMonth() !== +m - 1 || date.getUTCDate() !== +d) {
-    throw new Error(`week_ending does not exist: "${s}"`);
+export function toIsoDate(value: string | undefined): string {
+  const text = value ?? "";
+  const usMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const [year, month, day] = usMatch
+    ? [usMatch[3], usMatch[1], usMatch[2]].map(Number)
+    : isoMatch
+      ? [isoMatch[1], isoMatch[2], isoMatch[3]].map(Number)
+      : [];
+  if (!year || !month || !day) throw new Error(`week_ending is not MM/DD/YYYY: "${text}"`);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error(`week_ending does not exist: "${text}"`);
   }
   return date.toISOString().slice(0, 10);
 }

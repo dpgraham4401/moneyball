@@ -13,15 +13,15 @@ const csv = (...rows: string[]) => [HEADER, ...rows].join("\n");
 describe("parsePayrollCsv", () => {
   it("parses the provided dataset with no rejections", () => {
     const { records, rejected, fileError } = parsePayrollCsv(
-      readFileSync("payroll_data.csv", "utf8"),
+      readFileSync("data/payroll_data.csv", "utf8"),
       "payroll_data.csv"
     );
     expect(fileError).toBeUndefined();
     expect(rejected).toEqual([]);
     expect(records).toHaveLength(263);
-    expect(new Set(records.map((r) => r.employeeId)).size).toBe(23);
+    expect(new Set(records.map((record) => record.employeeId)).size).toBe(23);
     // Line 40: a known rate spike, kept as data for anomaly detection to flag.
-    expect(records.find((r) => r.ref === "payroll_data.csv:40")).toMatchObject({
+    expect(records.find((record) => record.ref === "payroll_data.csv:40")).toMatchObject({
       employeeName: "Kamille O'Reilly",
       weekEnding: "2025-03-15",
       standardRateCents: 8857,
@@ -48,8 +48,12 @@ describe("parsePayrollCsv", () => {
       ),
       "test.csv"
     );
-    expect(records.map((r) => r.employeeName)).toEqual(["Ana"]);
-    expect(rejected.map((r) => r.ref)).toEqual(["test.csv:3", "test.csv:4", "test.csv:5"]);
+    expect(records.map((record) => record.employeeName)).toEqual(["Ana"]);
+    expect(rejected.map((rejection) => rejection.ref)).toEqual([
+      "test.csv:3",
+      "test.csv:4",
+      "test.csv:5",
+    ]);
     expect(rejected[0].reason).toMatch(/level/);
     expect(rejected[1].reason).toMatch(/does not exist/);
     expect(rejected[2].reason).toMatch(/standard_rate/);
