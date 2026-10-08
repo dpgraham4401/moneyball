@@ -71,15 +71,18 @@ The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CS
 
 Each anomaly has a severity and keeps a reference to its source record. Every threshold is configurable in `DEFAULT_THRESHOLDS`.
 
-| Check                    | Severity   | Rule                                               |
-| ------------------------ | ---------- | -------------------------------------------------- |
-| Standard rate deviation  | High       | More than 20% from the employee's own median rate  |
-| Benefits rate deviation  | Medium     | More than 20% from the employee's own median rate  |
-| Overtime rate mismatch   | Medium     | Overtime rate is not 1.5x the standard rate        |
-| Long day / short day     | High / Low | Over 14 h / under 3 h on a worked day              |
-| Long week / short week   | High / Low | Over 60 h / under 16 h                             |
-| Name mismatch            | Medium     | Name differs from the most common name for that ID |
-| Duplicate week           | High       | More than one row for the same employee and week   |
-| Week ending not Saturday | Medium     | `week_ending` falls on another weekday             |
+| Check                    | Severity   | Rule                                                                                        |
+| ------------------------ | ---------- | ------------------------------------------------------------------------------------------- |
+| Standard rate deviation  | High       | More than 20% from the employee's own median rate (needs 3+ weeks of history)               |
+| Benefits rate deviation  | Medium     | More than 20% from the employee's own median rate                                           |
+| Overtime rate mismatch   | Medium     | Overtime rate is not 1.5x the standard rate                                                 |
+| Long day / short day     | High / Low | Over 14 h / under 3 h on a worked day                                                       |
+| Long week / short week   | High / Low | Over 60 h / under 16 h                                                                      |
+| Standard hours over 40   | Medium     | More than 40 standard hours in a week (likely unpaid overtime)                              |
+| Apprentice ratio         | Medium     | More apprentices than journeyworkers of the same trade on a day (default 1:1, configurable) |
+| Rate vs trade peers      | Medium     | Usual rate more than 25% from the median for the same trade and level (groups of 3+)        |
+| Name mismatch            | Medium     | Name differs from the most common name for that ID                                          |
+| Duplicate week           | High       | More than one row for the same employee and week                                            |
+| Week ending not Saturday | Medium     | `week_ending` falls on another weekday                                                      |
 
 Rows with invalid values (a non-numeric rate, an impossible date, an unknown level) are rejected and reported. All other rows are kept and flagged, so no data is silently dropped.
