@@ -42,7 +42,7 @@ export const DEFAULT_THRESHOLDS = {
 };
 export type Thresholds = typeof DEFAULT_THRESHOLDS;
 
-const SEVERITY_ORDER: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
+export const SEVERITY_ORDER: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const hoursText = (hours: number) => `${Math.round(hours * 10) / 10}h`;

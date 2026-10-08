@@ -1,6 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import { AnomalyTable } from "@/components/dashboard/anomaly-table";
-import { EmployeeTable } from "@/components/dashboard/employee-table";
+import { EmployeeTable, type EmployeeRow } from "@/components/dashboard/employee-table";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -14,17 +14,15 @@ export default async function DashboardPage() {
   const employees = employeeStats(records);
   const anomalies = detectAnomalies(records);
 
-  // Count distinct rows (not findings) per employee, so one bad row with two problems counts once.
-  const flaggedRowsByEmployee = new Map<string, number>();
-  for (const [employeeId, employeeAnomalies] of Map.groupBy(
-    anomalies,
-    (anomaly) => anomaly.employeeId
-  )) {
-    flaggedRowsByEmployee.set(
-      employeeId,
-      new Set(employeeAnomalies.map((anomaly) => anomaly.ref)).size
-    );
-  }
+  // Flagged weeks = distinct records with any anomaly, so one bad week with two problems counts once.
+  const flaggedRecordsByEmployee = Map.groupBy(
+    new Set(anomalies.map((anomaly) => `${anomaly.employeeId}|${anomaly.ref}`)),
+    (key) => key.split("|")[0]
+  );
+  const employeeRows: EmployeeRow[] = employees.map((employee) => ({
+    ...employee,
+    flaggedWeeks: flaggedRecordsByEmployee.get(employee.employeeId)?.length ?? 0,
+  }));
   const countBySeverity = (severity: Severity) =>
     anomalies.filter((anomaly) => anomaly.severity === severity).length;
 
@@ -68,7 +66,7 @@ export default async function DashboardPage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Employees</h2>
-        <EmployeeTable employees={employees} flaggedRowsByEmployee={flaggedRowsByEmployee} />
+        <EmployeeTable employees={employeeRows} />
       </section>
     </main>
   );

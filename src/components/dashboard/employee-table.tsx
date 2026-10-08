@@ -1,101 +1,131 @@
+"use client";
+
 import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
 import { EmployeeActions } from "@/components/dashboard/employee-actions";
+import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatHours, formatWholeDollars } from "@/lib/format";
-import type { EmployeeStats, Range } from "@/lib/payroll/stats";
+import type { EmployeeStats } from "@/lib/payroll/stats";
 
-/** "min / avg / max" with the average emphasized. */
-function RangeCell({ range, format }: { range: Range; format: (value: number) => string }) {
+export type EmployeeRow = EmployeeStats & { flaggedWeeks: number };
+
+const RIGHT_ALIGNED = { className: "text-right whitespace-nowrap tabular-nums" };
+
+const columns: ColumnDef<EmployeeRow>[] = [
+  {
+    id: "employee",
+    // Name first so sorting is by name; ID and other spellings included so search finds them.
+    accessorFn: (employee) =>
+      [employee.employeeName, employee.employeeId, ...employee.nameVariants].join(" "),
+    header: "Employee",
+    cell: ({ row }) => {
+      const employee = row.original;
+      const otherNames = employee.nameVariants.filter((name) => name !== employee.employeeName);
+      return (
+        <>
+          <Link
+            href={`/payroll/employees/${employee.employeeId}`}
+            className="font-medium hover:underline"
+          >
+            {employee.employeeName}
+          </Link>
+          <div className="text-muted-foreground text-xs">
+            ID {employee.employeeId}
+            {otherNames.length > 0 && ` · also "${otherNames.join('", "')}"`}
+          </div>
+        </>
+      );
+    },
+  },
+  {
+    accessorKey: "occupation",
+    header: "Trade",
+    filterFn: "equals",
+    cell: ({ row }) => (
+      <>
+        <div>{row.original.occupation}</div>
+        {row.original.level === "APPRENTICE" && (
+          <Badge className="bg-accent text-accent-foreground">Apprentice</Badge>
+        )}
+      </>
+    ),
+  },
+  // Hidden: exists only so the level dropdown can filter on it.
+  { accessorKey: "level", header: "Level", filterFn: "equals", enableGlobalFilter: false },
+  { accessorKey: "weeksWorked", header: "Weeks", enableGlobalFilter: false, meta: RIGHT_ALIGNED },
+  {
+    id: "hoursPerDay",
+    accessorFn: (employee) => employee.hoursPerDay.avg, // sorts by the average
+    header: "Hours/day (min / avg / max)",
+    enableGlobalFilter: false,
+    meta: RIGHT_ALIGNED,
+    cell: ({ row }) => {
+      const range = row.original.hoursPerDay;
+      return (
+        <>
+          <span className="text-muted-foreground">{formatHours(range.min)} / </span>
+          <span className="font-medium">{formatHours(range.avg)}</span>
+          <span className="text-muted-foreground"> / {formatHours(range.max)}</span>
+        </>
+      );
+    },
+  },
+  {
+    accessorKey: "totalSpendCents",
+    header: "Total spend",
+    enableGlobalFilter: false,
+    meta: RIGHT_ALIGNED,
+    cell: ({ row }) => formatWholeDollars(row.original.totalSpendCents),
+  },
+  {
+    accessorKey: "flaggedWeeks",
+    header: "Flagged weeks",
+    enableGlobalFilter: false,
+    sortDescFirst: true,
+    meta: RIGHT_ALIGNED,
+    cell: ({ row }) =>
+      row.original.flaggedWeeks > 0 ? (
+        <Badge variant="destructive">{row.original.flaggedWeeks}</Badge>
+      ) : (
+        <span className="text-muted-foreground">0</span>
+      ),
+  },
+  {
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    enableSorting: false,
+    meta: { className: "w-12" },
+    cell: ({ row }) => <EmployeeActions employee={row.original} />,
+  },
+];
+
+export function EmployeeTable({ employees }: { employees: EmployeeRow[] }) {
+  const trades = [...new Set(employees.map((employee) => employee.occupation))].sort();
+
   return (
-    <TableCell className="text-right whitespace-nowrap">
-      <span className="text-muted-foreground">{format(range.min)} / </span>
-      <span className="font-medium">{format(range.avg)}</span>
-      <span className="text-muted-foreground"> / {format(range.max)}</span>
-    </TableCell>
-  );
-}
-
-export function EmployeeTable({
-  employees,
-  flaggedRowsByEmployee,
-}: {
-  employees: EmployeeStats[];
-  flaggedRowsByEmployee: Map<string, number>;
-}) {
-  const sortedEmployees = [...employees].sort((left, right) =>
-    left.employeeName.localeCompare(right.employeeName)
-  );
-
-  return (
-    <div className="overflow-x-auto">
-      <Table className="tabular-nums">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Employee</TableHead>
-            <TableHead>Trade</TableHead>
-            <TableHead className="text-right">Weeks</TableHead>
-            <TableHead className="text-right">Hours/day (min / avg / max)</TableHead>
-            <TableHead className="text-right">Total spend</TableHead>
-            <TableHead className="text-right">Flagged weeks</TableHead>
-            <TableHead className="w-12">
-              <span className="sr-only">Actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedEmployees.map((employee) => {
-            const flaggedRows = flaggedRowsByEmployee.get(employee.employeeId) ?? 0;
-            return (
-              <TableRow key={employee.employeeId}>
-                <TableCell>
-                  <Link
-                    href={`/payroll/employees/${employee.employeeId}`}
-                    className="font-medium hover:underline"
-                  >
-                    {employee.employeeName}
-                  </Link>
-                  <div className="text-muted-foreground text-xs">
-                    ID {employee.employeeId}
-                    {employee.nameVariants.length > 1 &&
-                      ` · also "${employee.nameVariants
-                        .filter((name) => name !== employee.employeeName)
-                        .join('", "')}"`}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div>{employee.occupation}</div>
-                  {employee.level === "APPRENTICE" && (
-                    <Badge className="bg-accent text-accent-foreground">Apprentice</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">{employee.weeksWorked}</TableCell>
-                <RangeCell range={employee.hoursPerDay} format={formatHours} />
-                <TableCell className="text-right">
-                  {formatWholeDollars(employee.totalSpendCents)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {flaggedRows > 0 ? (
-                    <Badge variant="destructive">{flaggedRows}</Badge>
-                  ) : (
-                    <span className="text-muted-foreground">0</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <EmployeeActions employee={employee} />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={employees}
+      searchPlaceholder="Search name, ID, or trade…"
+      initialSorting={[{ id: "employee", desc: false }]}
+      hiddenColumnIds={["level"]}
+      selectFilters={[
+        {
+          columnId: "occupation",
+          label: "Trades",
+          options: trades.map((trade) => ({ value: trade, label: trade })),
+        },
+        {
+          columnId: "level",
+          label: "Levels",
+          options: [
+            { value: "APPRENTICE", label: "Apprentice" },
+            { value: "JOURNEYWORKER", label: "Journeyworker" },
+          ],
+        },
+      ]}
+      emptyMessage="No employees match these filters."
+    />
   );
 }
