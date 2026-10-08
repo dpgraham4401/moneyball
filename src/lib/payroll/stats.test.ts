@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parsePayrollCsv } from "@/lib/payroll/csv";
-import { employeeStats, summarize } from "@/lib/payroll/stats";
+import { employeeStats, employeeWeeks, summarize } from "@/lib/payroll/stats";
 import { makeRecord } from "@/lib/payroll/make-record";
 
 // Hand-checked fixture: Ana works 2 weeks (one spelled differently), Bob 1 week.
@@ -95,5 +95,33 @@ describe("employeeStats", () => {
     expect(stats.find((employee) => employee.employeeId === "1021")?.nameVariants).toContain(
       "Deanna Wisozk"
     );
+  });
+});
+
+describe("employeeWeeks", () => {
+  const anaRecords = [
+    makeRecord({ weekEnding: "2025-03-15", hours: [[8, 0]] }), // after a one-week gap
+    makeRecord({
+      weekEnding: "2025-03-01",
+      hours: [
+        [8, 2],
+        [8, 0],
+      ],
+    }),
+  ];
+  const [first, second] = employeeWeeks(anaRecords);
+
+  it("orders weeks oldest first and has no change for the first week", () => {
+    expect(first).toMatchObject({ weekEnding: "2025-03-01", totalHours: 18, daysWorked: 2 });
+    expect(first.hoursChange).toBeNull();
+    expect(first.spendChangeCents).toBeNull();
+    expect(first.isAfterGap).toBe(false);
+  });
+
+  it("computes change against the previous week worked and marks gaps", () => {
+    // wk1: 16×2705 + 2×4058 = 51396 wages, 18×1217 = 21906 benefits → 73302
+    // wk2: 8×2705 = 21640, 8×1217 = 9736 → 31376
+    expect(second).toMatchObject({ hoursChange: -10, spendChangeCents: 31376 - 73302 });
+    expect(second.isAfterGap).toBe(true);
   });
 });

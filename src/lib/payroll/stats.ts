@@ -110,3 +110,43 @@ export function employeeStats(records: PayrollRecord[]) {
     };
   });
 }
+
+export type EmployeeWeek = ReturnType<typeof employeeWeeks>[number];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * One employee's records as a weekly time series, oldest first, with week-over-week change.
+ * Change is measured against the previous week *worked*; isAfterGap marks when weeks were skipped.
+ */
+export function employeeWeeks(employeeRecords: PayrollRecord[]) {
+  const sortedRecords = [...employeeRecords].sort((left, right) =>
+    left.weekEnding.localeCompare(right.weekEnding)
+  );
+  return sortedRecords.map((record, index) => {
+    const previousRecord = index > 0 ? sortedRecords[index - 1] : undefined;
+    const hours = recordHours(record);
+    const spendCents = recordSpendCents(record).total;
+    const previousHours = previousRecord ? recordHours(previousRecord).total : undefined;
+    const previousSpendCents = previousRecord ? recordSpendCents(previousRecord).total : undefined;
+    const daysSincePrevious = previousRecord
+      ? (Date.parse(record.weekEnding) - Date.parse(previousRecord.weekEnding)) / DAY_MS
+      : undefined;
+
+    return {
+      ref: record.ref,
+      weekEnding: record.weekEnding,
+      employeeName: record.employeeName,
+      standardHours: hours.standard,
+      overtimeHours: hours.overtime,
+      totalHours: hours.total,
+      daysWorked: record.days.filter((day) => getTotalHoursInDay(day) > 0).length,
+      standardRateCents: record.standardRateCents,
+      benefitsRateCents: record.benefitsRateCents,
+      spendCents,
+      hoursChange: previousHours === undefined ? null : hours.total - previousHours,
+      spendChangeCents: previousSpendCents === undefined ? null : spendCents - previousSpendCents,
+      isAfterGap: daysSincePrevious !== undefined && daysSincePrevious > 7,
+    };
+  });
+}
