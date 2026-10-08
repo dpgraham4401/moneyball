@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { EmployeeActions } from "@/components/dashboard/employee-actions";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -55,7 +56,12 @@ export function EmployeeTable({
             return (
               <TableRow key={employee.employeeId}>
                 <TableCell>
-                  <div className="font-medium">{employee.employeeName}</div>
+                  <Link
+                    href={`/payroll/employees/${employee.employeeId}`}
+                    className="font-medium hover:underline"
+                  >
+                    {employee.employeeName}
+                  </Link>
                   <div className="text-muted-foreground text-xs">
                     ID {employee.employeeId}
                     {employee.nameVariants.length > 1 &&

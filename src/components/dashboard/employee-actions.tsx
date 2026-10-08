@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { DollarSign, Menu } from "lucide-react";
+import { ChartLine, DollarSign, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,6 +46,12 @@ export function EmployeeActions({ employee }: { employee: EmployeeStats }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/payroll/employees/${employee.employeeId}`}>
+              <ChartLine />
+              View details
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setIsRatesOpen(true)}>
             <DollarSign />
             Rates

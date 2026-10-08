@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -37,7 +38,6 @@ export function AnomalyTable({ anomalies }: { anomalies: Anomaly[] }) {
             <TableHead>Employee</TableHead>
             <TableHead>Check</TableHead>
             <TableHead>Details</TableHead>
-            <TableHead>Record</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -50,14 +50,12 @@ export function AnomalyTable({ anomalies }: { anomalies: Anomaly[] }) {
               </TableCell>
               <TableCell className="whitespace-nowrap">{formatDate(anomaly.weekEnding)}</TableCell>
               <TableCell className="whitespace-nowrap">
-                {anomaly.employeeName}
-                <span className="text-muted-foreground text-xs"> #{anomaly.employeeId}</span>
+                <Link href={`/payroll/employees/${anomaly.employeeId}`} className="hover:underline">
+                  {anomaly.employeeName}
+                </Link>
               </TableCell>
               <TableCell className="whitespace-nowrap">{ruleLabel(anomaly.rule)}</TableCell>
               <TableCell className="min-w-64 whitespace-normal">{anomaly.message}</TableCell>
-              <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                {anomaly.ref}
-              </TableCell>
             </TableRow>
           ))}
         </TableBody>

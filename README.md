@@ -69,7 +69,7 @@ The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CS
 
 ### Anomaly detection
 
-Each anomaly shows the record it came from and has a severity. Every threshold is configurable in `DEFAULT_THRESHOLDS`.
+Each anomaly has a severity and keeps a reference to its source record. Every threshold is configurable in `DEFAULT_THRESHOLDS`.
 
 | Check                    | Severity   | Rule                                               |
 | ------------------------ | ---------- | -------------------------------------------------- |
