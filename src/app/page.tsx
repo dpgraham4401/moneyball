@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_PROJECT_SLUG, projectPaths } from "@/lib/projects";
 
 export default function Home() {
   return (
@@ -11,7 +12,7 @@ export default function Home() {
         data-entry errors flagged for follow-up.
       </p>
       <Button asChild>
-        <Link href="/payroll">
+        <Link href={projectPaths.payroll(DEFAULT_PROJECT_SLUG)}>
           Open payroll dashboard <ArrowRight />
         </Link>
       </Button>

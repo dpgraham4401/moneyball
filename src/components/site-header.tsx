@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DEFAULT_PROJECT_SLUG, projectPaths } from "@/lib/projects";
 
 export function SiteHeader() {
   return (
@@ -27,7 +28,7 @@ export function SiteHeader() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <Link href="/payroll">
+              <Link href={projectPaths.payroll(DEFAULT_PROJECT_SLUG)}>
                 <LayoutDashboard />
                 Payroll dashboard
               </Link>

@@ -27,9 +27,16 @@ import {
 } from "@/components/ui/table";
 import { formatCents } from "@/lib/format";
 import type { EmployeeStats } from "@/lib/payroll/stats";
+import { projectPaths } from "@/lib/projects";
 
 /** Per-row actions menu. Client component: the menu and modal need state; the table stays server-rendered. */
-export function EmployeeActions({ employee }: { employee: EmployeeStats }) {
+export function EmployeeActions({
+  employee,
+  projectSlug,
+}: {
+  employee: EmployeeStats;
+  projectSlug: string;
+}) {
   const [isRatesOpen, setIsRatesOpen] = useState(false);
   const rates = [
     { label: "Standard", range: employee.standardRateCents },
@@ -47,7 +54,7 @@ export function EmployeeActions({ employee }: { employee: EmployeeStats }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem asChild>
-            <Link href={`/payroll/employees/${employee.employeeId}`}>
+            <Link href={projectPaths.employee(projectSlug, employee.employeeId)}>
               <ChartLine />
               View details
             </Link>

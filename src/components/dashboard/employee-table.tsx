@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { EmployeeActions } from "@/components/dashboard/employee-actions";
@@ -7,12 +8,13 @@ import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatHours, formatWholeDollars } from "@/lib/format";
 import type { EmployeeStats } from "@/lib/payroll/stats";
+import { projectPaths } from "@/lib/projects";
 
 export type EmployeeRow = EmployeeStats & { flaggedWeeks: number };
 
 const RIGHT_ALIGNED = { className: "text-right whitespace-nowrap tabular-nums" };
 
-const columns: ColumnDef<EmployeeRow>[] = [
+const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
   {
     id: "employee",
     // Name first so sorting is by name; ID and other spellings included so search finds them.
@@ -25,7 +27,7 @@ const columns: ColumnDef<EmployeeRow>[] = [
       return (
         <>
           <Link
-            href={`/payroll/employees/${employee.employeeId}`}
+            href={projectPaths.employee(projectSlug, employee.employeeId)}
             className="font-medium hover:underline"
           >
             {employee.employeeName}
@@ -96,11 +98,19 @@ const columns: ColumnDef<EmployeeRow>[] = [
     header: () => <span className="sr-only">Actions</span>,
     enableSorting: false,
     meta: { className: "w-12" },
-    cell: ({ row }) => <EmployeeActions employee={row.original} />,
+    cell: ({ row }) => <EmployeeActions employee={row.original} projectSlug={projectSlug} />,
   },
 ];
 
-export function EmployeeTable({ employees }: { employees: EmployeeRow[] }) {
+export function EmployeeTable({
+  employees,
+  projectSlug,
+}: {
+  employees: EmployeeRow[];
+  projectSlug: string;
+}) {
+  // Stable column definitions: TanStack re-derives the table when the columns array changes.
+  const columns = useMemo(() => buildColumns(projectSlug), [projectSlug]);
   const trades = [...new Set(employees.map((employee) => employee.occupation))].sort();
 
   return (

@@ -1,11 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { SEVERITY_ORDER, type Anomaly, type Severity } from "@/lib/payroll/anomalies";
+import { projectPaths } from "@/lib/projects";
 
 const SEVERITY_BADGE: Record<Severity, React.ComponentProps<typeof Badge>> = {
   high: { variant: "destructive" },
@@ -19,7 +21,7 @@ const ruleLabel = (rule: string) => {
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-const columns: ColumnDef<Anomaly>[] = [
+const buildColumns = (projectSlug: string): ColumnDef<Anomaly>[] => [
   {
     accessorKey: "severity",
     header: "Severity",
@@ -44,7 +46,10 @@ const columns: ColumnDef<Anomaly>[] = [
     header: "Employee",
     meta: { className: "whitespace-nowrap" },
     cell: ({ row }) => (
-      <Link href={`/payroll/employees/${row.original.employeeId}`} className="hover:underline">
+      <Link
+        href={projectPaths.employee(projectSlug, row.original.employeeId)}
+        className="hover:underline"
+      >
         {row.original.employeeName}
       </Link>
     ),
@@ -64,7 +69,15 @@ const columns: ColumnDef<Anomaly>[] = [
   },
 ];
 
-export function AnomalyTable({ anomalies }: { anomalies: Anomaly[] }) {
+export function AnomalyTable({
+  anomalies,
+  projectSlug,
+}: {
+  anomalies: Anomaly[];
+  projectSlug: string;
+}) {
+  // Stable column definitions: TanStack re-derives the table when the columns array changes.
+  const columns = useMemo(() => buildColumns(projectSlug), [projectSlug]);
   if (!anomalies.length) {
     return <p className="text-muted-foreground">No anomalies found.</p>;
   }

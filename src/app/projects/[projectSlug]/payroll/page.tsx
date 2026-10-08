@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { AnomalyTable } from "@/components/dashboard/anomaly-table";
 import { EmployeeTable, type EmployeeRow } from "@/components/dashboard/employee-table";
@@ -7,9 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { detectAnomalies, type Severity } from "@/lib/payroll/anomalies";
 import { getPayrollData } from "@/lib/payroll/source";
 import { employeeStats, summarize } from "@/lib/payroll/stats";
+import { getProject, PROJECTS } from "@/lib/projects";
 
-export default async function DashboardPage() {
-  const { records, rejected, fileError } = await getPayrollData();
+/** Prerender one dashboard per project at build time. */
+export function generateStaticParams() {
+  return PROJECTS.map((project) => ({ projectSlug: project.slug }));
+}
+
+// Reading params inside <Suspense> lets navigation show the shell instantly (Cache Components).
+export default function DashboardPage({ params }: PageProps<"/projects/[projectSlug]/payroll">) {
+  return (
+    <Suspense fallback={<main className="mx-auto w-full max-w-6xl px-4 py-10">Loading…</main>}>
+      <Dashboard params={params} />
+    </Suspense>
+  );
+}
+
+async function Dashboard({ params }: { params: Promise<{ projectSlug: string }> }) {
+  const { projectSlug } = await params;
+  const project = getProject(projectSlug);
+  if (!project) notFound();
+  const { records, rejected, fileError } = await getPayrollData(project.slug);
   const summary = summarize(records);
   const employees = employeeStats(records);
   const anomalies = detectAnomalies(records);
@@ -29,6 +49,7 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10">
       <header className="flex flex-col gap-1">
+        <p className="text-muted-foreground text-sm">{project.name}</p>
         <h1 className="font-heading text-3xl font-semibold tracking-tight">Payroll dashboard</h1>
         <p className="text-muted-foreground">
           Weekly payroll for {summary.employeeCount} workers across {summary.weekCount} weeks, with
@@ -61,12 +82,12 @@ export default async function DashboardPage() {
             <Badge variant="outline">{countBySeverity("low")} low</Badge>
           </div>
         </div>
-        <AnomalyTable anomalies={anomalies} />
+        <AnomalyTable anomalies={anomalies} projectSlug={project.slug} />
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Employees</h2>
-        <EmployeeTable employees={employeeRows} />
+        <EmployeeTable employees={employeeRows} projectSlug={project.slug} />
       </section>
     </main>
   );

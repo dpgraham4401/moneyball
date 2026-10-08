@@ -17,13 +17,20 @@ import { formatCents, formatDate, formatHours, formatWholeDollars } from "@/lib/
 import { detectAnomalies, median } from "@/lib/payroll/anomalies";
 import { getPayrollData } from "@/lib/payroll/source";
 import { employeeStats, employeeWeeks } from "@/lib/payroll/stats";
+import { getProject, PROJECTS, projectPaths } from "@/lib/projects";
 
 /** Prerender one page per employee at build time. */
 export async function generateStaticParams() {
-  const { records } = await getPayrollData();
-  return [...new Set(records.map((record) => record.employeeId))].map((employeeId) => ({
-    employeeId,
-  }));
+  const paramsPerProject = await Promise.all(
+    PROJECTS.map(async (project) => {
+      const { records } = await getPayrollData(project.slug);
+      return [...new Set(records.map((record) => record.employeeId))].map((employeeId) => ({
+        projectSlug: project.slug,
+        employeeId,
+      }));
+    })
+  );
+  return paramsPerProject.flat();
 }
 
 /** "+2.5" / "−3" with an arrow; nothing for the first week. */
@@ -41,7 +48,9 @@ function Change({ value, format }: { value: number | null; format: (value: numbe
 }
 
 // Reading params inside <Suspense> lets navigation show the shell instantly (Cache Components).
-export default function EmployeePage({ params }: PageProps<"/payroll/employees/[employeeId]">) {
+export default function EmployeePage({
+  params,
+}: PageProps<"/projects/[projectSlug]/payroll/employees/[employeeId]">) {
   return (
     <Suspense fallback={<main className="mx-auto w-full max-w-6xl px-4 py-10">Loading…</main>}>
       <EmployeeDetail params={params} />
@@ -49,16 +58,25 @@ export default function EmployeePage({ params }: PageProps<"/payroll/employees/[
   );
 }
 
-async function EmployeeDetail({ params }: { params: Promise<{ employeeId: string }> }) {
-  const { employeeId } = await params;
-  const { records } = await getPayrollData();
+async function EmployeeDetail({
+  params,
+}: {
+  params: Promise<{ projectSlug: string; employeeId: string }>;
+}) {
+  const { projectSlug, employeeId } = await params;
+  const project = getProject(projectSlug);
+  if (!project) notFound();
+  const { records } = await getPayrollData(project.slug);
   const employeeRecords = records.filter((record) => record.employeeId === employeeId);
   if (!employeeRecords.length) notFound();
 
   const [employee] = employeeStats(employeeRecords);
   const weeks = employeeWeeks(employeeRecords);
-  // Anomalies are detected per employee, so running on this employee's records alone is equivalent.
-  const anomaliesByRecord = Map.groupBy(detectAnomalies(employeeRecords), (anomaly) => anomaly.ref);
+  // Detect on the whole crew: the apprentice-ratio and peer-rate rules compare across employees.
+  const employeeAnomalies = detectAnomalies(records).filter(
+    (anomaly) => anomaly.employeeId === employeeId
+  );
+  const anomaliesByRecord = Map.groupBy(employeeAnomalies, (anomaly) => anomaly.ref);
   const peakWeek = weeks.reduce((peak, week) => (week.totalHours > peak.totalHours ? week : peak));
 
   const stats = [
@@ -85,7 +103,7 @@ async function EmployeeDetail({ params }: { params: Promise<{ employeeId: string
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10">
       <div className="flex flex-col gap-2">
         <Link
-          href="/payroll"
+          href={projectPaths.payroll(project.slug)}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
         >
           <ArrowLeft className="size-4" /> Payroll dashboard
