@@ -1,3 +1,4 @@
+import { EmployeeActions } from "@/components/dashboard/employee-actions";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -7,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCents, formatHours, formatWholeDollars } from "@/lib/format";
+import { formatHours, formatWholeDollars } from "@/lib/format";
 import type { EmployeeStats, Range } from "@/lib/payroll/stats";
 
 /** "min / avg / max" with the average emphasized. */
@@ -41,10 +42,11 @@ export function EmployeeTable({
             <TableHead>Trade</TableHead>
             <TableHead className="text-right">Weeks</TableHead>
             <TableHead className="text-right">Hours/day (min / avg / max)</TableHead>
-            <TableHead className="text-right">Standard rate</TableHead>
-            <TableHead className="text-right">Benefits rate</TableHead>
             <TableHead className="text-right">Total spend</TableHead>
             <TableHead className="text-right">Flagged rows</TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -70,8 +72,6 @@ export function EmployeeTable({
                 </TableCell>
                 <TableCell className="text-right">{employee.weeksWorked}</TableCell>
                 <RangeCell range={employee.hoursPerDay} format={formatHours} />
-                <RangeCell range={employee.standardRateCents} format={formatCents} />
-                <RangeCell range={employee.benefitsRateCents} format={formatCents} />
                 <TableCell className="text-right">
                   {formatWholeDollars(employee.totalSpendCents)}
                 </TableCell>
@@ -81,6 +81,9 @@ export function EmployeeTable({
                   ) : (
                     <span className="text-muted-foreground">0</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <EmployeeActions employee={employee} />
                 </TableCell>
               </TableRow>
             );

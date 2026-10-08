@@ -23,7 +23,7 @@ export type PayrollRecord = {
   benefitsRateCents: number;
 };
 
-/** A source row that couldn't become a PayrollRecord, with why. */
+/** An input entry (CSV row, upload line, ...) that couldn't become a PayrollRecord, with why. */
 export type Rejected = { ref: string; reason: string };
 
 export type ParseResult = { records: PayrollRecord[]; rejected: Rejected[]; fileError?: string };

@@ -37,7 +37,7 @@ export function AnomalyTable({ anomalies }: { anomalies: Anomaly[] }) {
             <TableHead>Employee</TableHead>
             <TableHead>Check</TableHead>
             <TableHead>Details</TableHead>
-            <TableHead>Source row</TableHead>
+            <TableHead>Record</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
