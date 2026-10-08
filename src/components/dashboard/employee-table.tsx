@@ -43,7 +43,7 @@ export function EmployeeTable({
             <TableHead className="text-right">Weeks</TableHead>
             <TableHead className="text-right">Hours/day (min / avg / max)</TableHead>
             <TableHead className="text-right">Total spend</TableHead>
-            <TableHead className="text-right">Flagged rows</TableHead>
+            <TableHead className="text-right">Flagged weeks</TableHead>
             <TableHead className="w-12">
               <span className="sr-only">Actions</span>
             </TableHead>

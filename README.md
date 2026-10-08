@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Payroll Dashboard
 
-## Getting Started
+A dashboard for reviewing weekly construction payroll. It shows summary statistics, per-employee statistics and likely data-entry errors.
 
-First, run the development server:
+Built with Next.js 16 (App Router), TypeScript, Tailwind CSS, shadcn/ui and Vitest.
+
+## Requirements
+
+- Node.js 20.9 or newer
+- pnpm (the version is pinned in `package.json`; run `corepack enable` to use it automatically)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000/payroll.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The dashboard reads `data/payroll_data.csv`. You don't need a database or environment variables.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Command                     | Description                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `pnpm dev`                  | Start the development server                                   |
+| `pnpm build` / `pnpm start` | Production build and server                                    |
+| `pnpm test`                 | Unit tests (Vitest, watch mode; add `--run` for a single pass) |
+| `pnpm lint`                 | ESLint                                                         |
 
-To learn more about Next.js, take a look at the following resources:
+Pre-commit hooks (lefthook) run Prettier and ESLint on staged files.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+data/payroll_data.csv          Source data
+src/lib/payroll/
+  types.ts                     Source-independent data model (PayrollRecord)
+  csv.ts                       CSV adapter: wide weekly rows -> PayrollRecord[]
+  source.ts                    getPayrollData(): the only data entry point for the UI
+  stats.ts                     Summary and per-employee statistics
+  anomalies.ts                 Anomaly rules and thresholds
+src/app/payroll/page.tsx       Dashboard (server component)
+src/components/dashboard/      Dashboard sections
+```
 
-## Deploy on Vercel
+The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CSV with a database or uploads, change `source.ts`; the dashboard doesn't change.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Summary statistics
+
+- Unique employees (counted by employee ID) and apprentice count
+- Pay period and number of weeks
+- Total, standard and overtime hours
+- Apprentice share of hours
+- Total spend, split into wages and benefits
+- Average standard, overtime and benefits rates, weighted by hours
+
+### Employee statistics
+
+- Weeks worked
+- Hours per day (min / avg / max), counting only days worked
+- Total spend
+- Number of flagged weeks
+- Name variants recorded under the same ID
+- Rates (standard, overtime, benefits; min / avg / max), in a modal opened from the row's menu
+
+### Anomaly detection
+
+Each anomaly shows the record it came from and has a severity. Every threshold is configurable in `DEFAULT_THRESHOLDS`.
+
+| Check                    | Severity   | Rule                                               |
+| ------------------------ | ---------- | -------------------------------------------------- |
+| Standard rate deviation  | High       | More than 20% from the employee's own median rate  |
+| Benefits rate deviation  | Medium     | More than 20% from the employee's own median rate  |
+| Overtime rate mismatch   | Medium     | Overtime rate is not 1.5x the standard rate        |
+| Long day / short day     | High / Low | Over 14 h / under 3 h on a worked day              |
+| Long week / short week   | High / Low | Over 60 h / under 16 h                             |
+| Name mismatch            | Medium     | Name differs from the most common name for that ID |
+| Duplicate week           | High       | More than one row for the same employee and week   |
+| Week ending not Saturday | Medium     | `week_ending` falls on another weekday             |
+
+Rows with invalid values (a non-numeric rate, an impossible date, an unknown level) are rejected and reported. All other rows are kept and flagged, so no data is silently dropped.
