@@ -52,10 +52,9 @@
 }
 
 :root {
-  /* Reunion palette, from reunioninfra.com's Webflow CSS variables. */
   --eggshell: #fffef6;
   --carbon: #212121;
-  --brand: #22cfa2; /* reunion-teal */
+  --brand: #22cfa2; /* teal */
   --brand-dark: #0ba37b; /* dark-teal */
   --brand-forest: #1a5433; /* forest */
   --camel: #e9d4ba;
