@@ -119,5 +119,9 @@ Rows with invalid values (a non-numeric rate, an impossible date, an unknown lev
 
 ### Future work
 
-- The data model currently does not store detected anomalies, so they have to be recomputed on the fly. This is OK for a small number of payroll weeks and employees, but in order to be scalable, we need to store anomalies.
--
+Area that I would have gotten to with a little more time.
+
+- Store detected anomalies: The data model currently does not store detected anomalies, so they have to be recomputed on the fly. This is OK for a small number of payroll weeks and employees, but in order to be scalable, we need to store anomalies.
+- Upload with import review: Let a project manager upload a CSV and see rejected rows and name changes for an existing payroll ID (typo vs. a different person) before the data is saved, instead of finding them later as anomalies.
+- Use wage and apprenticeship rules: Compare pay to a wage determination for a project, and use each trade's real apprentice ratio instead of the 1:1 default.
+- Deploy. Host the app with a managed SQLite database (Cloudflare D1 or Turso) and add sign-in so each user sees only their own projects.
