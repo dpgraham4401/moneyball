@@ -43,8 +43,10 @@ export const DEFAULT_THRESHOLDS = {
   minPeerGroupSize: 3,
   maxDayHours: 14,
   minDayHours: 3, // only checked on days with any hours
-  maxWeekHours: 60,
-  minWeekHours: 16,
+  /** Well above the data's 95th percentile (48.4h); catches the ~86–88h weeks. */
+  maxWeekHours: 70,
+  /** Below full-time (30h/week), worth a look but often legitimate (part-time, partial weeks). */
+  minWeekHours: 30,
   /** Hours past 40 in a week are normally overtime (FLSA / Davis-Bacon); more "standard" hours suggests unpaid OT. */
   maxStandardWeekHours: 40,
   /**
@@ -196,7 +198,7 @@ export function detectAnomalies(
           record,
           "short-week",
           "low",
-          `Only ${hoursText(hoursInWeek)} in the week (under ${thresholds.minWeekHours}h)`
+          `Only ${hoursText(hoursInWeek)} in the week (under the ${thresholds.minWeekHours}h full-time threshold)`
         );
       }
 

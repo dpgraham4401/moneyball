@@ -1,13 +1,12 @@
-# Payroll Dashboard
+# MoneyBall
 
-A dashboard for reviewing weekly construction payroll. It shows summary statistics, per-employee statistics and likely data-entry errors.
-
-Built with Next.js 16 (App Router), TypeScript, Tailwind CSS, shadcn/ui and Vitest.
+A dashboard for reviewing weekly payroll for [Prevailing Wages and Apprenticeship](https://www.irs.gov/credits-deductions/prevailing-wage-and-apprenticeship-requirements) compliance.
+It shows summary statistics, per-employee statistics and likely data-entry errors.
 
 ## Requirements
 
-- Node.js 20.9 or newer
-- pnpm (the version is pinned in `package.json`; run `corepack enable` to use it automatically)
+- Node.js 26
+- pnpm
 
 ## Getting started
 
@@ -16,33 +15,19 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000/payroll.
+Open http://localhost:3000/.
 
-The dashboard reads `data/payroll_data.csv`. You don't need a database or environment variables.
-
-## Scripts
-
-| Command                     | Description                                                    |
-| --------------------------- | -------------------------------------------------------------- |
-| `pnpm dev`                  | Start the development server                                   |
-| `pnpm build` / `pnpm start` | Production build and server                                    |
-| `pnpm test`                 | Unit tests (Vitest, watch mode; add `--run` for a single pass) |
-| `pnpm lint`                 | ESLint                                                         |
-
-Pre-commit hooks (lefthook) run Prettier and ESLint on staged files.
+Pre-commit git hooks run Prettier and ESLint on staged files.
 
 ## Project structure
 
 ```
 data/payroll_data.csv          Source data
-src/lib/payroll/
-  types.ts                     Source-independent data model (PayrollRecord)
-  csv.ts                       CSV adapter: wide weekly rows -> PayrollRecord[]
-  source.ts                    getPayrollData(): the only data entry point for the UI
+src/lib/payroll/               Reusable logic for detecting anomalies, payroll stats
+  types.ts                     Source-agnostic data model (DTO), can be read from CSV, DB, ect.
   stats.ts                     Summary and per-employee statistics
   anomalies.ts                 Anomaly rules and thresholds
-src/app/payroll/page.tsx       Dashboard (server component)
-src/components/dashboard/      Dashboard sections
+src/app/                       The Next.js application that handles routing and server/client side rendered components.
 ```
 
 The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CSV with a database or uploads, change `source.ts`; the dashboard doesn't change.
@@ -78,7 +63,7 @@ Each anomaly has a severity and keeps a reference to its source record. Every th
 | Overtime rate mismatch   | Medium     | Overtime rate is not 1.5x the standard rate                                                 |
 | Long day / short day     | High / Low | Over 14 h / under 3 h on a worked day                                                       |
 | Long week / short week   | High / Low | Over 60 h / under 16 h                                                                      |
-| Standard hours over 40   | Medium     | More than 40 standard hours in a week (likely unpaid overtime)                              |
+| unpaid overtime          | Medium     | More than 40 standard hours in a week (likely unpaid overtime)                              |
 | Apprentice ratio         | Medium     | More apprentices than journeyworkers of the same trade on a day (default 1:1, configurable) |
 | Rate vs trade peers      | Medium     | Usual rate more than 25% from the median for the same trade and level (groups of 3+)        |
 | Name mismatch            | Medium     | Name differs from the most common name for that ID                                          |

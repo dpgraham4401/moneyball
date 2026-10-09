@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest"
+    "test": "vitest",
+    "prepare": "lefthook install || echo 'lefthook: hooks not installed (not a git checkout)'"
   },
   "dependencies": {
     "@tanstack/react-table": "8.21.3",

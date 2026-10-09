@@ -60,7 +60,7 @@ describe("detectAnomalies", () => {
       hours: [...NORMAL_WEEK.slice(0, 4), [2, 0]],
     });
     const shortWeek = journeyworkerRecord({ ref: "short-week", hours: [[8, 0]] });
-    expect(rulesFor([longDay], "long-day")).toEqual(["long-day"]);
+    expect(rulesFor([longDay], "long-day")).toContain("long-day"); // 20.4h week is also under 30h
     expect(rulesFor([longWeek], "long-week")).toContain("long-week"); // 13h/day is under 14
     expect(rulesFor([shortDay], "short-day")).toEqual(["short-day"]);
     expect(rulesFor([shortWeek], "short-week")).toEqual(["short-week"]);
