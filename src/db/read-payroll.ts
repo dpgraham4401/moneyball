@@ -18,7 +18,7 @@ export async function readPayrollData(db: Database, projectSlug: string): Promis
   const weeks = await db
     .select({
       id: payrollWeeks.id,
-      employeeId: employees.externalId,
+      employeeId: employees.payrollId,
       employeeName: payrollWeeks.nameAsRecorded,
       level: payrollWeeks.level,
       occupation: payrollWeeks.occupation,

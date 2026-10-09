@@ -31,7 +31,7 @@ export const projects = sqliteTable("projects", {
 /** A person, independent of any project (workers move between jobs). */
 export const employees = sqliteTable("employees", {
   id: integer().primaryKey({ autoIncrement: true }),
-  externalId: text().notNull().unique(), // employee_id from payroll, e.g. "1021"
+  payrollId: text().notNull().unique(), // employee_id as it appears on payroll, e.g. "1021"
   name: text().notNull(), // canonical (most frequent) spelling
 });
 

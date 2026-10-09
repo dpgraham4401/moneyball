@@ -36,7 +36,7 @@ describe("importPayrollCsv", () => {
     expect(await countRows(db, dayHours)).toBe(263 * 7);
 
     // Typos are kept per week; the employee keeps the most frequent spelling.
-    const [zander] = await db.select().from(employees).where(eq(employees.externalId, "1021"));
+    const [zander] = await db.select().from(employees).where(eq(employees.payrollId, "1021"));
     expect(zander.name).toBe("Zander Wisozk");
     const names = await db
       .selectDistinct({ name: payrollWeeks.nameAsRecorded })

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -13,6 +14,7 @@ import {
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -42,6 +44,8 @@ declare module "@tanstack/react-table" {
 /** Radix Select can't use "" as an item value, so "no filter" gets a sentinel. */
 const ALL_OPTION = "__all__";
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
 /** A dropdown that filters one column to an exact value. */
 export type SelectFilter = {
   columnId: string;
@@ -51,7 +55,8 @@ export type SelectFilter = {
 
 /**
  * Client-side table with a text search across all columns, optional dropdown filters,
- * and click-to-sort headers. Fine for hundreds of rows; past that, filter/sort in the query.
+ * click-to-sort headers, and pagination. Fine for hundreds of rows; past that, filter, sort,
+ * and paginate in the query instead.
  */
 export function DataTable<TData>({
   columns,
@@ -61,6 +66,7 @@ export function DataTable<TData>({
   initialSorting = [],
   hiddenColumnIds = [],
   emptyMessage = "No results.",
+  initialPageSize = PAGE_SIZE_OPTIONS[0],
 }: {
   columns: ColumnDef<TData>[];
   data: TData[];
@@ -70,6 +76,7 @@ export function DataTable<TData>({
   /** Columns that exist only to be filtered on, not shown. */
   hiddenColumnIds?: string[];
   emptyMessage?: string;
+  initialPageSize?: number;
 }) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -83,6 +90,7 @@ export function DataTable<TData>({
     state: { sorting, columnFilters, globalFilter },
     initialState: {
       columnVisibility: Object.fromEntries(hiddenColumnIds.map((columnId) => [columnId, false])),
+      pagination: { pageIndex: 0, pageSize: initialPageSize },
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -91,8 +99,14 @@ export function DataTable<TData>({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    // Page index resets to the first page whenever search, filters, or sorting change.
+    getPaginationRowModel: getPaginationRowModel(),
   });
-  const visibleRows = table.getRowModel().rows;
+  const visibleRows = table.getRowModel().rows; // current page only
+  const matchingRowCount = table.getFilteredRowModel().rows.length;
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const firstRowShown = matchingRowCount ? pageIndex * pageSize + 1 : 0;
+  const lastRowShown = Math.min((pageIndex + 1) * pageSize, matchingRowCount);
 
   return (
     <div className="flex flex-col gap-3">
@@ -129,7 +143,7 @@ export function DataTable<TData>({
           );
         })}
         <span className="text-muted-foreground ml-auto text-sm">
-          {visibleRows.length} of {data.length}
+          {matchingRowCount} of {data.length}
         </span>
       </div>
 
@@ -208,6 +222,53 @@ export function DataTable<TData>({
           </TableBody>
         </Table>
       </div>
+
+      {matchingRowCount > PAGE_SIZE_OPTIONS[0] && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span className="text-muted-foreground" aria-live="polite">
+            Showing {firstRowShown}–{lastRowShown} of {matchingRowCount}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Rows per page</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => table.setPageSize(Number(value))}
+            >
+              <SelectTrigger aria-label="Rows per page" className="w-20" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground tabular-nums">
+              Page {pageIndex + 1} of {table.getPageCount()}
+            </span>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Previous page"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Next page"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

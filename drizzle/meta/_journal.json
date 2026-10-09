@@ -8,6 +8,13 @@
       "when": 1791504995207,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791506425371,
+      "tag": "0001_rename_external_id_to_payroll_id",
+      "breakpoints": true
     }
   ]
 }

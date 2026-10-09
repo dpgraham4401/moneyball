@@ -87,9 +87,9 @@ export async function importPayrollCsv(
     }
 
     // Employees are shared across projects: insert new IDs, keep existing canonical names.
-    const employeeIdByExternalId = new Map<string, number>();
-    const employeeRows = [...canonicalNames(parsed.records)].map(([externalId, name]) => ({
-      externalId,
+    const employeeIdByPayrollId = new Map<string, number>();
+    const employeeRows = [...canonicalNames(parsed.records)].map(([payrollId, name]) => ({
+      payrollId,
       name,
     }));
     for (const rows of chunk(employeeRows, 2)) {
@@ -97,11 +97,11 @@ export async function importPayrollCsv(
         .insert(employees)
         .values(rows)
         .onConflictDoUpdate({
-          target: employees.externalId,
-          set: { externalId: employees.externalId },
+          target: employees.payrollId,
+          set: { payrollId: employees.payrollId },
         })
-        .returning({ id: employees.id, externalId: employees.externalId });
-      for (const employee of inserted) employeeIdByExternalId.set(employee.externalId, employee.id);
+        .returning({ id: employees.id, payrollId: employees.payrollId });
+      for (const employee of inserted) employeeIdByPayrollId.set(employee.payrollId, employee.id);
     }
 
     for (const records of chunk(parsed.records, 11)) {
@@ -111,7 +111,7 @@ export async function importPayrollCsv(
           records.map((record) => ({
             projectId: project.id,
             importId: payrollImport.id,
-            employeeId: employeeIdByExternalId.get(record.employeeId)!,
+            employeeId: employeeIdByPayrollId.get(record.employeeId)!,
             nameAsRecorded: record.employeeName,
             level: record.level,
             occupation: record.occupation,
