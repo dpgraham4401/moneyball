@@ -32,6 +32,38 @@ src/app/                       The Next.js application that handles routing and 
 
 The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CSV with a database or uploads, change `source.ts`; the dashboard doesn't change.
 
+## Database
+
+SQLite via Drizzle ORM: a local file in development, deployable unchanged to Cloudflare D1 or Turso. With `DATABASE_URL` set, the dashboard reads from the database; without it, it reads `data/payroll_data.csv` directly, so the app runs with no setup.
+
+```mermaid
+erDiagram
+  projects ||--o{ payroll_imports : has
+  projects ||--o{ payroll_weeks : has
+  payroll_imports ||--o{ payroll_weeks : contains
+  payroll_imports ||--o{ import_rejections : reports
+  employees ||--o{ payroll_weeks : works
+  payroll_weeks ||--|{ day_hours : "7 days"
+```
+
+| Table               | Holds                                                               |
+| ------------------- | ------------------------------------------------------------------- |
+| `projects`          | A construction project (URL slug, name)                             |
+| `employees`         | A worker, independent of any project                                |
+| `payroll_imports`   | An uploaded CSV, kept raw so it can be re-processed                 |
+| `import_rejections` | Rows from an import that couldn't be parsed                         |
+| `payroll_weeks`     | One employee's pay line for one week (level, trade, rates in cents) |
+| `day_hours`         | Standard and overtime hours for each day of that week               |
+
+Schema: `src/db/schema.ts`. Migrations: `drizzle/`.
+
+```bash
+cp .env.example .env.local   # DATABASE_URL=file:local.db
+pnpm db:migrate              # create/update the local database
+pnpm db:seed                 # import data/payroll_data.csv (safe to re-run)
+pnpm db:generate             # after editing the schema: write a new migration
+```
+
 ## Features
 
 ### Summary statistics
