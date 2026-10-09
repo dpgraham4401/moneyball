@@ -6,16 +6,25 @@ It shows summary statistics, per-employee statistics and likely data-entry error
 ## Requirements
 
 - Node.js 26
-- pnpm
+- pnpm (run `corepack enable` to use the version pinned in `package.json`)
+
+No database server is needed: the database is a local SQLite file.
 
 ## Getting started
 
 ```bash
 pnpm install
+cp .env.example .env.local   # DATABASE_URL=file:local.db
+pnpm db:migrate              # create the SQLite database and its tables
+pnpm db:seed                 # import data/payroll_data.csv
 pnpm dev
 ```
 
-Open http://localhost:3000/.
+Open http://localhost:3000/
+
+To skip the database, run just `pnpm install` and `pnpm dev`. Without `.env.local`, the dashboard reads `data/payroll_data.csv` directly.
+
+Run `pnpm test --run` for the unit tests. To reset the database, delete `local.db` and run `pnpm db:migrate && pnpm db:seed` again.
 
 Pre-commit git hooks run Prettier and ESLint on staged files.
 
@@ -30,11 +39,13 @@ src/lib/payroll/               Reusable logic for detecting anomalies, payroll s
 src/app/                       The Next.js application that handles routing and server/client side rendered components.
 ```
 
-The UI only depends on `PayrollRecord` and `getPayrollData()`. To replace the CSV with a database or uploads, change `source.ts`; the dashboard doesn't change.
+The UI only depends on `PayrollRecord` and `getPayrollData()`.
+This was implemented as a way to keep the logic/frontend decoupled from the source of the data (CSV or DB table)
 
 ## Database
 
-SQLite via Drizzle ORM: a local file in development, deployable unchanged to Cloudflare D1 or Turso. With `DATABASE_URL` set, the dashboard reads from the database; without it, it reads `data/payroll_data.csv` directly, so the app runs with no setup.
+We use SQLite as the DB engine to keep things simple for this assignment and to keep options open (e.g., upgrade to postgres later, or deploy to Cloudflare D1).
+The DB is kept in sync with the drizzle package, which acts as an ORM and the way we migrate the database for any 'future' changes.
 
 ```mermaid
 erDiagram
@@ -46,14 +57,14 @@ erDiagram
   payroll_weeks ||--|{ day_hours : "7 days"
 ```
 
-| Table               | Holds                                                               |
-| ------------------- | ------------------------------------------------------------------- |
-| `projects`          | A construction project (URL slug, name)                             |
-| `employees`         | A worker, independent of any project                                |
-| `payroll_imports`   | An uploaded CSV, kept raw so it can be re-processed                 |
-| `import_rejections` | Rows from an import that couldn't be parsed                         |
-| `payroll_weeks`     | One employee's pay line for one week (level, trade, rates in cents) |
-| `day_hours`         | Standard and overtime hours for each day of that week               |
+| Table               | Holds                                                                      |
+| ------------------- | -------------------------------------------------------------------------- |
+| `projects`          | A construction project (URL slug, name)                                    |
+| `employees`         | A worker, independent of any project                                       |
+| `payroll_imports`   | An uploaded of payrol records, in if expanded, we'd use an s3 like storage |
+| `import_rejections` | Rows from an import that couldn't be parsed, need to be kept for auditing  |
+| `payroll_weeks`     | One employee's pay line for one week                                       |
+| `day_hours`         | Standard and overtime hours for each day of that week                      |
 
 Schema: `src/db/schema.ts`. Migrations: `drizzle/`.
 
@@ -84,6 +95,8 @@ pnpm db:generate             # after editing the schema: write a new migration
 - Name variants recorded under the same ID
 - Rates (standard, overtime, benefits; min / avg / max), in a modal opened from the row's menu
 
+Both tables support search, dropdown filters, column sorting and pagination (10/25/50/100 rows per page).
+
 ### Anomaly detection
 
 Each anomaly has a severity and keeps a reference to its source record. Every threshold is configurable in `DEFAULT_THRESHOLDS`.
@@ -103,3 +116,8 @@ Each anomaly has a severity and keeps a reference to its source record. Every th
 | Week ending not Saturday | Medium     | `week_ending` falls on another weekday                                                      |
 
 Rows with invalid values (a non-numeric rate, an impossible date, an unknown level) are rejected and reported. All other rows are kept and flagged, so no data is silently dropped.
+
+### Future work
+
+- The data model currently does not store detected anomalies, so they have to be recomputed on the fly. This is OK for a small number of payroll weeks and employees, but in order to be scalable, we need to store anomalies.
+-
