@@ -3,3 +3,4 @@ build
 coverage
 next-env.d.ts
 pnpm-lock.yaml
+drizzle/

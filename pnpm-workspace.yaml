@@ -2,3 +2,5 @@ allowBuilds:
   unrs-resolver: true
   # Hooks are installed by the "prepare" script instead of lefthook's postinstall.
   lefthook: false
+  # drizzle-kit's esbuild ships prebuilt binaries via optional deps; its install script isn't needed.
+  esbuild: false
