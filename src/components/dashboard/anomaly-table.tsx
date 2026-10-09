@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { SEVERITY_ORDER, type Anomaly, type Severity } from "@/lib/payroll/anomalies";
 import { projectPaths } from "@/lib/projects";
+import { linkClassName } from "@/lib/utils";
 
 const SEVERITY_BADGE: Record<Severity, React.ComponentProps<typeof Badge>> = {
   high: { variant: "destructive" },
@@ -25,6 +26,7 @@ const buildColumns = (projectSlug: string): ColumnDef<Anomaly>[] => [
   {
     accessorKey: "severity",
     header: "Severity",
+    meta: { className: "w-28" },
     filterFn: "equals",
     // Sort high → low by meaning, not alphabetically.
     sortingFn: (rowA, rowB) =>
@@ -38,17 +40,17 @@ const buildColumns = (projectSlug: string): ColumnDef<Anomaly>[] => [
   {
     accessorKey: "weekEnding",
     header: "Week ending",
-    meta: { className: "whitespace-nowrap" },
+    meta: { className: "w-32 whitespace-nowrap" },
     cell: ({ row }) => formatDate(row.original.weekEnding),
   },
   {
     accessorKey: "employeeName",
     header: "Employee",
-    meta: { className: "whitespace-nowrap" },
+    meta: { className: "w-48 truncate" },
     cell: ({ row }) => (
       <Link
         href={projectPaths.employee(projectSlug, row.original.employeeId)}
-        className="hover:underline"
+        className={linkClassName}
       >
         {row.original.employeeName}
       </Link>
@@ -58,14 +60,14 @@ const buildColumns = (projectSlug: string): ColumnDef<Anomaly>[] => [
     accessorKey: "rule",
     header: "Check",
     filterFn: "equals",
-    meta: { className: "whitespace-nowrap" },
+    meta: { className: "w-52 truncate" },
     cell: ({ row }) => ruleLabel(row.original.rule),
   },
   {
     accessorKey: "message",
     header: "Details",
     enableSorting: false,
-    meta: { className: "min-w-64 whitespace-normal" },
+    meta: { className: "whitespace-normal" }, // takes the remaining width
   },
 ];
 
@@ -104,6 +106,8 @@ export function AnomalyTable({
         },
       ]}
       emptyMessage="No anomalies match these filters."
+      tableClassName="min-w-[60rem]"
+      rowClassName="h-14"
     />
   );
 }

@@ -67,6 +67,8 @@ export function DataTable<TData>({
   hiddenColumnIds = [],
   emptyMessage = "No results.",
   initialPageSize = PAGE_SIZE_OPTIONS[0],
+  tableClassName,
+  rowClassName,
 }: {
   columns: ColumnDef<TData>[];
   data: TData[];
@@ -77,6 +79,10 @@ export function DataTable<TData>({
   hiddenColumnIds?: string[];
   emptyMessage?: string;
   initialPageSize?: number;
+  /** e.g. a min-width, so fixed-width columns scroll instead of squashing on small screens. */
+  tableClassName?: string;
+  /** Fixed row height (e.g. "h-14") so every page, padded to a full page, has the same height. */
+  rowClassName?: string;
 }) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -142,13 +148,58 @@ export function DataTable<TData>({
             </Select>
           );
         })}
-        <span className="text-muted-foreground ml-auto text-sm">
-          {matchingRowCount} of {data.length}
+      </div>
+
+      {/* Pager sits above the table so its buttons don't move as page heights differ. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span className="text-muted-foreground tabular-nums" aria-live="polite">
+          Showing {firstRowShown}–{lastRowShown} of {matchingRowCount}
+          {matchingRowCount !== data.length && ` (filtered from ${data.length})`}
         </span>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Rows per page</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger aria-label="Rows per page" className="w-20" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground w-24 text-right tabular-nums">
+            Page {pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+          </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Previous page"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Next page"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
-        <Table>
+        {/* Fixed layout: column widths come from the column definitions, not each page's content. */}
+        <Table className={cn("table-fixed", tableClassName)}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -199,17 +250,30 @@ export function DataTable<TData>({
             ))}
           </TableHeader>
           <TableBody>
-            {visibleRows.length ? (
-              visibleRows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+            {visibleRows.length
+              ? visibleRows.map((row) => (
+                  <TableRow key={row.id} className={rowClassName}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              : null}
+            {/* Pad short pages to a full page so content below the table doesn't jump. */}
+            {visibleRows.length > 0 &&
+              table.getPageCount() > 1 &&
+              Array.from({ length: pageSize - visibleRows.length }, (_, index) => (
+                <TableRow
+                  key={`filler-${index}`}
+                  aria-hidden
+                  className={cn(rowClassName, "border-0 hover:bg-transparent")}
+                >
+                  <TableCell colSpan={table.getVisibleLeafColumns().length} />
                 </TableRow>
-              ))
-            ) : (
+              ))}
+            {visibleRows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={table.getVisibleLeafColumns().length}
@@ -222,53 +286,6 @@ export function DataTable<TData>({
           </TableBody>
         </Table>
       </div>
-
-      {matchingRowCount > PAGE_SIZE_OPTIONS[0] && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground" aria-live="polite">
-            Showing {firstRowShown}–{lastRowShown} of {matchingRowCount}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Rows per page</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(value) => table.setPageSize(Number(value))}
-            >
-              <SelectTrigger aria-label="Rows per page" className="w-20" size="sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={String(option)}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="text-muted-foreground tabular-nums">
-              Page {pageIndex + 1} of {table.getPageCount()}
-            </span>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Previous page"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeft />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Next page"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

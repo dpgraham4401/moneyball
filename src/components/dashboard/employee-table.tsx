@@ -9,10 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatHours, formatWholeDollars } from "@/lib/format";
 import type { EmployeeStats } from "@/lib/payroll/stats";
 import { projectPaths } from "@/lib/projects";
+import { cn, linkClassName } from "@/lib/utils";
 
 export type EmployeeRow = EmployeeStats & { flaggedWeeks: number };
 
-const RIGHT_ALIGNED = { className: "text-right whitespace-nowrap tabular-nums" };
+const rightAligned = (width: string) => ({
+  className: `${width} text-right whitespace-nowrap tabular-nums`,
+});
 
 const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
   {
@@ -20,7 +23,7 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
     // Name first so sorting is by name; ID and other spellings included so search finds them.
     accessorFn: (employee) =>
       [employee.employeeName, employee.employeeId, ...employee.nameVariants].join(" "),
-    header: "Employee",
+    header: "Employee", // takes the remaining width
     cell: ({ row }) => {
       const employee = row.original;
       const otherNames = employee.nameVariants.filter((name) => name !== employee.employeeName);
@@ -28,7 +31,7 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
         <>
           <Link
             href={projectPaths.employee(projectSlug, employee.employeeId)}
-            className="font-medium hover:underline"
+            className={cn(linkClassName, "font-medium")}
           >
             {employee.employeeName}
           </Link>
@@ -43,6 +46,7 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
   {
     accessorKey: "occupation",
     header: "Trade",
+    meta: { className: "w-44" },
     filterFn: "equals",
     cell: ({ row }) => (
       <>
@@ -55,13 +59,18 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
   },
   // Hidden: exists only so the level dropdown can filter on it.
   { accessorKey: "level", header: "Level", filterFn: "equals", enableGlobalFilter: false },
-  { accessorKey: "weeksWorked", header: "Weeks", enableGlobalFilter: false, meta: RIGHT_ALIGNED },
+  {
+    accessorKey: "weeksWorked",
+    header: "Weeks",
+    enableGlobalFilter: false,
+    meta: rightAligned("w-20"),
+  },
   {
     id: "hoursPerDay",
     accessorFn: (employee) => employee.hoursPerDay.avg, // sorts by the average
     header: "Hours/day (min / avg / max)",
     enableGlobalFilter: false,
-    meta: RIGHT_ALIGNED,
+    meta: rightAligned("w-60"),
     cell: ({ row }) => {
       const range = row.original.hoursPerDay;
       return (
@@ -77,7 +86,7 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
     accessorKey: "totalSpendCents",
     header: "Total spend",
     enableGlobalFilter: false,
-    meta: RIGHT_ALIGNED,
+    meta: rightAligned("w-32"),
     cell: ({ row }) => formatWholeDollars(row.original.totalSpendCents),
   },
   {
@@ -85,7 +94,7 @@ const buildColumns = (projectSlug: string): ColumnDef<EmployeeRow>[] => [
     header: "Flagged weeks",
     enableGlobalFilter: false,
     sortDescFirst: true,
-    meta: RIGHT_ALIGNED,
+    meta: rightAligned("w-36"),
     cell: ({ row }) =>
       row.original.flaggedWeeks > 0 ? (
         <Badge variant="destructive">{row.original.flaggedWeeks}</Badge>
@@ -136,6 +145,8 @@ export function EmployeeTable({
         },
       ]}
       emptyMessage="No employees match these filters."
+      tableClassName="min-w-[56rem]"
+      rowClassName="h-16"
     />
   );
 }
